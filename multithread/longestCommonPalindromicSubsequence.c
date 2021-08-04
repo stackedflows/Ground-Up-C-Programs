@@ -7,6 +7,8 @@ struct sequenceInfo{
   int len;
 };
 
+// time complexity: O(n^2)
+// space complexity: O(1)
 void *odd(struct sequenceInfo* seqInfo){
   char* seq = seqInfo->sequence;
   int len = seqInfo->len;
