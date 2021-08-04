@@ -2,9 +2,14 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-// time complexity: O(n^2)
-// space complexity: O(1)
-void *odd(char* seq, int len){
+struct sequenceInfo{
+  char* sequence;
+  int len;
+};
+
+void *odd(struct sequenceInfo* seqInfo){
+  char* seq = seqInfo->sequence;
+  int len = seqInfo->len;
   int currMaxOdd = 0;
   for(int i = 1; i < len - 1; i++){
     int low = i - 1;
@@ -27,7 +32,9 @@ void *odd(char* seq, int len){
 
 // time complexity: O(n^2)
 // space complexity: O(1)
-void *even(char* seq, int len){
+void *even(struct sequenceInfo* seqInfo){
+  char* seq = seqInfo->sequence;
+  int len = seqInfo->len;
   int currMaxEven = 0;
   for(int i = 0; i < len - 1; i++){
     int low = i;
@@ -55,39 +62,12 @@ int main(void){
   char seq1[] = "asdhjbajshhsjsf";
   int len0 = sizeof(seq0)/sizeof(seq0[0]) - 1;
   int len1 = sizeof(seq1)/sizeof(seq1[0]) - 1;
+  struct sequenceInfo str0 = {(char*)seq0, len0};
+  struct sequenceInfo str1 = {(char*)seq1, len1};
+  struct sequenceInfo* s0 = &str0;
+  struct sequenceInfo* s1 = &str1;
 
-  odd((char*)seq0, len0);
-  even((char*)seq1, len1);
-
-  /* must wrap res and len in a truct and pass to thread for this to work */
-
-  /*
-
-  int* res0;
-  int* res1;
-
-  pthread_t t0;
-  pthread_t t1;
-  if (pthread_create(&t0, NULL, &f0, NULL)!=0){
-    return 1;
-  }
-  if (pthread_create(&t1, NULL, &f1, NULL)!=0){
-    return 11;
-  }
-
-  if(pthread_join(t0, (void**)&res0)!=0){
-    return 2;
-  }
-  if(pthread_join(t1, (void**)&res1)!=0){
-    return 22;
-  }
-
-  if (*res0 < *res1){
-    printf("%d\n", *res1);
-  }else{
-    printf("%d\n", *res1);
-  }
-
-  */
+  odd(s0);
+  even(s1);
   return 0;
 }
