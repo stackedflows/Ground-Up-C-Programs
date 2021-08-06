@@ -6,4 +6,4 @@ We find that for the string examined, the execution time comes to around 300 mic
 
 If we compare this to a similar program written in python, the execution time comes out as around 1000 microseconds.
 
-I.E there is 3x time complexity reduction.
+I.E there is 3.3x time complexity reduction.
