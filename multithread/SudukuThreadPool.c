@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#define colThreadNum 4
+#define threadNum 4
 
 #define squareUnit 2
 #define square 4
@@ -15,21 +15,21 @@ int isValid = 1;
 //
 // threadpool for col calculations
 //
-typedef struct taskCol {
+typedef struct Task {
   int** input;
   int type;
   int index;
   int subX;
   int subY;
-} taskCol;
+} Task;
 
-taskCol colTaskQueue[3*square];
-int colTaskCount = 0;
+Task taskQueue[3*square];
+int taskCount = 0;
 
-pthread_mutex_t colMutexQueue;
-pthread_cond_t colCondQueue;
+pthread_mutex_t mutexQueue;
+pthread_cond_t condQueue;
 
-void checkCol(taskCol* task){
+void checkTask(Task* task){
   int** input = task -> input;
   int available[] = {0,0,0,0,0,0,0,0,0,0};
   int type = task -> type;
@@ -90,37 +90,30 @@ void checkCol(taskCol* task){
   return;
 }
 
-void* colStartThread(void* args){
+void* startThread(void* args){
   while(1){
-    taskCol task;
-    pthread_mutex_lock(&colMutexQueue);
-    // waits for task to become available
-    while(colTaskCount == 0){
-      pthread_cond_wait(&colCondQueue, &colMutexQueue);
-      break;
-    }
-    // choose task
-    task = colTaskQueue[0];
+    Task task;
+    pthread_mutex_lock(&mutexQueue);
+    task = taskQueue[0];
     int i;
-    for(i = 0; i < colTaskCount; i++){
-      colTaskQueue[i] = colTaskQueue[i + 1];
+    for(i = 0; i < taskCount; i++){
+      taskQueue[i] = taskQueue[i + 1];
     }
-    colTaskCount--;
-    pthread_mutex_unlock(&colMutexQueue);
-    // execute task
-    checkCol(&task);
-    if(colTaskCount == 0){
+    taskCount--;
+    pthread_mutex_unlock(&mutexQueue);
+    checkTask(&task);
+    if(taskCount == 0){
       break;
     }
   }
 }
 
-void submitColTask(taskCol task){
-  pthread_mutex_lock(&colMutexQueue);
-  colTaskQueue[colTaskCount] = task;
-  colTaskCount++;
-  pthread_mutex_unlock(&colMutexQueue);
-  pthread_cond_signal(&colCondQueue);
+void submitTask(Task task){
+  pthread_mutex_lock(&mutexQueue);
+  taskQueue[taskCount] = task;
+  taskCount++;
+  pthread_mutex_unlock(&mutexQueue);
+  pthread_cond_signal(&condQueue);
 }
 
 int main(void){
@@ -144,37 +137,37 @@ int main(void){
   }
 
   //
-  // col threadpool execute
+  // execute threadpool
   //
-  pthread_t th_col[colThreadNum];
-  pthread_mutex_init(&colMutexQueue, NULL);
-  pthread_cond_init(&colCondQueue, NULL);
-  for(int i = 0; i < colThreadNum; i++){
-    if(pthread_create(&th_col[i], NULL, &colStartThread, NULL) != 0){
+  pthread_t th_col[threadNum];
+  pthread_mutex_init(&mutexQueue, NULL);
+  pthread_cond_init(&condQueue, NULL);
+  for(int i = 0; i < threadNum; i++){
+    if(pthread_create(&th_col[i], NULL, &startThread, NULL) != 0){
       printf("failed to create thread\n");
     }
   }
 
   for(int i = 0; i < square; i++){
-    taskCol t = {
+    Task t = {
       .input = input,
       .type = 0,
       .index = i,
       .subX = -1,
       .subY = -1
     };
-    submitColTask(t);
+    submitTask(t);
   }
 
   for(int i = 0; i < square; i++){
-    taskCol t = {
+    Task t = {
       .input = input,
       .type = 1,
       .index = i,
       .subX = -1,
       .subY = -1
     };
-    submitColTask(t);
+    submitTask(t);
   }
 
   int subX = 0;
@@ -182,27 +175,30 @@ int main(void){
   for(int i = 0; i < squareUnit; i++){
     subY = 0;
     for(int j = 0; j < squareUnit; j++){
-      taskCol t = {
+      Task t = {
         .input = input,
         .type = 2,
         .index = -1,
         .subX = subX,
         .subY = subY
       };
-      submitColTask(t);
+      submitTask(t);
       subY = subY + squareUnit;
     }
     subX = subX + squareUnit;
   }
 
-  for(int i = 0; i < colThreadNum; i++){
+  for(int i = 0; i < threadNum; i++){
     if(pthread_join(th_col[i], NULL) != 0){
       printf("failed to join thread\n");
     }
   }
-  pthread_mutex_destroy(&colMutexQueue);
-  pthread_cond_destroy(&colCondQueue);
+  pthread_mutex_destroy(&mutexQueue);
+  pthread_cond_destroy(&condQueue);
 
+  //
+  // output result
+  //
   switch(isValid){
     case 0:
       printf("does not pass\n");
