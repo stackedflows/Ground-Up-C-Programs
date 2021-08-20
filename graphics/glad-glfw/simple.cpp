@@ -32,6 +32,13 @@ void processInput(GLFWwindow* window){
         glfwSetWindowShouldClose(window, true);
 }
 
+// define triangle verticies
+float vertices[] = {
+    -0.5f, -0.5f, 0.0f,
+     0.5f, -0.5f, 0.0f,
+     0.0f,  0.5f, 0.0f
+};
+
 int main() {
     // initialise glfw, check it is using the correct version (3)
     glfwInit();
