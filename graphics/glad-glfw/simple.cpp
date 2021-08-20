@@ -39,6 +39,14 @@ float vertices[] = {
      0.0f,  0.5f, 0.0f
 };
 
+void verticiesToGPU(const int VBO) {
+    // bind array buffer to object, as this is the type needed for vbo
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    // now we can assign the verticies to the buffer, static draw: set once, used many times vs dynamic draw, where the buffer data will change often
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+}
+
 // inline shader program in glsl, gl shader language
 const char* vertexShaderSource =
 "// specify version\n"
@@ -74,6 +82,23 @@ void checkShaderCompilerErrors(unsigned int shader) {
     }
 }
 
+// compile vertex shader and check for errors
+void vertexShaderCompile(const int vertexShader) {
+    // attach shader source code to shader, compile
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+
+    // check for errors in shader compilation
+    checkShaderCompilerErrors(vertexShader);
+}
+
+// compile fragment shader to gpu
+void fragmentShaderCompile(const int fragmentShader) {
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
+    checkShaderCompilerErrors(fragmentShader);
+}
+
 // checks for errors in linker
 void checkLinker(unsigned int linkProgram) {
     int  success;
@@ -84,6 +109,24 @@ void checkLinker(unsigned int linkProgram) {
         std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
     }
 }
+
+void shaderProgramLink(unsigned int shaderProgram, unsigned int vertexShader, unsigned int fragmentShader) {
+    // attach programs to linker
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    // check to see if linker has worked
+    checkLinker(shaderProgram);
+
+    // now we can use the linked shaders
+    glUseProgram(shaderProgram);
+
+    // and remove the unused shaders
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+}
+
 
 int main() {
     // initialise glfw, check it is using the correct version (3)
@@ -116,55 +159,31 @@ int main() {
     // create vertex buffer object and assign to it a single unit of memory locally
     unsigned int VBO;
     glGenBuffers(1, &VBO);
-
-    // bind array buffer to object, as this is the type needed for vbo
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-    // now we can assign the verticies to the buffer, static draw: set once, used many times vs dynamic draw, where the buffer data will change often
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    // bind verticies to correct api data type, send to gpu
+    verticiesToGPU(VBO);
 
     //// - - - now we can set up a vertex shader and process the array on gpu, and compile it as followed . . .
 
     // create shader object, with local reference
     unsigned int vertexShader;
     vertexShader = glCreateShader(GL_VERTEX_SHADER);
-
-    // attach shader source code to shader, compile
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-
-    // check for errors in shader compilation
-    checkShaderCompilerErrors(vertexShader);
+    // compile the vertex shader, and check for errors
+    vertexShaderCompile(vertexShader);
 
     //// - - - now for the fragment shader, which colours the shape we will create
 
     // we create and compile the fragment shader in a similar way to the vertex shader
     unsigned int fragmentShader;
     fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-    checkShaderCompilerErrors(fragmentShader);
+    fragmentShaderCompile(fragmentShader);
 
     //// - - - combined shader program: we need to link the above two programs into one: following which, opengl now knows how to process vertex and fragment data
 
     // create link program object
     unsigned int shaderProgram;
     shaderProgram = glCreateProgram();
-
-    // attach programs to linker
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-
-    // check to see if linker has worked
-    checkLinker(shaderProgram);
-
-    // now we can use the linked shaders
-    glUseProgram(shaderProgram);
-
-    // and remove the unused shaders
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+    // links the vertex shader and fragment shader into single program
+    shaderProgramLink(shaderProgram, vertexShader, fragmentShader);
 
     // render window context while not exit pressed
     while (!glfwWindowShouldClose(window)){
